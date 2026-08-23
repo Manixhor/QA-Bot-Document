@@ -1,0 +1,9 @@
+[server]
+headless = true
+
+[browser]
+gatherUsageStats = false
+
+[runner]
+# Suppress source watcher errors for transformers/torchvision
+magicEnabled = false

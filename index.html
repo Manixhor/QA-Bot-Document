@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📚 Document Q&A Bot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #1f77b4 0%, #2ca02c 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+        
+        .query-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+        }
+        
+        .query-section h2 {
+            color: #1f77b4;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        
+        .query-input {
+            width: 100%;
+            height: 120px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 16px;
+            resize: none;
+            transition: border-color 0.3s;
+        }
+        
+        .query-input:focus {
+            outline: none;
+            border-color: #1f77b4;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #1f77b4 0%, #2ca02c 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        
+        .answer-section {
+            background: #e8f5e9;
+            padding: 25px;
+            border-radius: 15px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .answer-section h3 {
+            color: #2ca02c;
+            margin-bottom: 15px;
+        }
+        
+        .answer-content {
+            line-height: 1.6;
+            color: #333;
+        }
+        
+        .sources-section {
+            background: #e3f2fd;
+            padding: 25px;
+            border-radius: 15px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .sources-section h3 {
+            color: #1f77b4;
+            margin-bottom: 15px;
+        }
+        
+        .source-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #1f77b4;
+        }
+        
+        .sidebar {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+        }
+        
+        .sidebar h2 {
+            color: #1f77b4;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        
+        .info-box {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #2ca02c;
+        }
+        
+        .info-box h4 {
+            color: #2ca02c;
+            margin-bottom: 8px;
+        }
+        
+        .info-box p {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .tech-stack {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .tech-stack h4 {
+            color: #1f77b4;
+            margin-bottom: 10px;
+        }
+        
+        .tech-item {
+            display: inline-block;
+            background: #e3f2fd;
+            color: #1f77b4;
+            padding: 5px 12px;
+            border-radius: 15px;
+            margin: 3px;
+            font-size: 0.85em;
+        }
+        
+        .features {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .features h4 {
+            color: #2ca02c;
+            margin-bottom: 10px;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .feature-item span {
+            margin-right: 10px;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1f77b4;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .demo-note {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+        
+        .demo-note strong {
+            color: #856404;
+        }
+        
+        footer {
+            background: #333;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        
+        footer p {
+            opacity: 0.8;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            header h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📚 Document Q&A Bot</h1>
+            <p>Ask questions about your documents and get accurate answers with source citations</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="query-section">
+                <h2>💬 Ask a Question</h2>
+                <textarea class="query-input" id="questionInput" placeholder="e.g., What are the main types of machine learning?"></textarea>
+                <button class="btn" onclick="askQuestion()">🔍 Get Answer</button>
+                
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Searching and generating answer...</p>
+                </div>
+                
+                <div class="answer-section" id="answerSection">
+                    <h3>📝 Answer</h3>
+                    <div class="answer-content" id="answerContent"></div>
+                </div>
+                
+                <div class="sources-section" id="sourcesSection">
+                    <h3>📚 Sources</h3>
+                    <div id="sourcesContent"></div>
+                </div>
+            </div>
+            
+            <div class="sidebar">
+                <h2>📊 Information</h2>
+                
+                <div class="info-box">
+                    <h4>🆓 Free API Options</h4>
+                    <p><strong>Google Gemini (Recommended)</strong><br>
+                    100% free, no credit card<br>
+                    15 requests/minute</p>
+                </div>
+                
+                <div class="info-box">
+                    <h4>⚡ Groq (Fastest)</h4>
+                    <p>Free tier available<br>
+                    Ultra-fast inference<br>
+                    30 requests/minute</p>
+                </div>
+                
+                <div class="tech-stack">
+                    <h4>🛠️ Tech Stack</h4>
+                    <span class="tech-item">Python</span>
+                    <span class="tech-item">LangChain</span>
+                    <span class="tech-item">ChromaDB</span>
+                    <span class="tech-item">Streamlit</span>
+                    <span class="tech-item">Gemini</span>
+                </div>
+                
+                <div class="features">
+                    <h4>✨ Features</h4>
+                    <div class="feature-item"><span>📄</span> PDF, TXT, DOCX support</div>
+                    <div class="feature-item"><span>🔍</span> Smart chunking with overlap</div>
+                    <div class="feature-item"><span>📎</span> Source citations</div>
+                    <div class="feature-item"><span>💰</span> Free API options</div>
+                    <div class="feature-item"><span>🖥️</span> Web + CLI interface</div>
+                </div>
+                
+                <div class="demo-note">
+                    <strong>📝 Demo Mode:</strong> This is a preview. To run the full application with real AI, install dependencies and run <code>streamlit run app.py</code>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Built with ❤️ using Streamlit + LangChain + ChromaDB + Free APIs</p>
+        </footer>
+    </div>
+    
+    <script>
+        // Sample answers for demo
+        const sampleAnswers = {
+            "python": {
+                answer: "Python is a high-level, interpreted programming language known for its simplicity and readability. Created by Guido van Rossum in 1991, it has become one of the most popular programming languages in the world. Python is used for web development, data science, machine learning, automation, and more.",
+                sources: [
+                    { file: "python_programming.txt", page: 1 },
+                    { file: "python_programming.txt", page: 2 }
+                ]
+            },
+            "machine learning": {
+                answer: "Machine Learning (ML) is a subset of artificial intelligence that enables systems to learn from experience without being explicitly programmed. The main types are: 1) Supervised Learning (uses labeled data), 2) Unsupervised Learning (finds hidden patterns), and 3) Reinforcement Learning (learns through interaction).",
+                sources: [
+                    { file: "machine_learning.txt", page: 1 },
+                    { file: "machine_learning.txt", page: 2 }
+                ]
+            },
+            "data science": {
+                answer: "Data Science is an interdisciplinary field combining statistics, computer science, and domain knowledge to extract insights from data. It encompasses the entire process from data collection to actionable insights, including data cleaning, analysis, modeling, and deployment.",
+                sources: [
+                    { file: "data_science.txt", page: 1 }
+                ]
+            },
+            "rag": {
+                answer: "RAG (Retrieval-Augmented Generation) combines LLMs with external knowledge retrieval to provide accurate, up-to-date answers with source citations. It works by ingesting documents, chunking them, creating embeddings, storing in a vector database, retrieving relevant chunks, and generating answers with citations.",
+                sources: [
+                    { file: "ai_large_language_models.txt", page: 4 }
+                ]
+            },
+            "web development": {
+                answer: "Web development is the process of building and maintaining websites and web applications. It includes frontend development (HTML, CSS, JavaScript), backend development (server logic, databases), and covers technologies like React, Angular, Node.js, and Python frameworks.",
+                sources: [
+                    { file: "web_development.txt", page: 1 }
+                ]
+            }
+        };
+        
+        function askQuestion() {
+            const question = document.getElementById('questionInput').value.toLowerCase();
+            const loading = document.getElementById('loading');
+            const answerSection = document.getElementById('answerSection');
+            const sourcesSection = document.getElementById('sourcesSection');
+            
+            if (!question.trim()) {
+                alert('Please enter a question!');
+                return;
+            }
+            
+            // Show loading
+            loading.style.display = 'block';
+            answerSection.style.display = 'none';
+            sourcesSection.style.display = 'none';
+            
+            // Simulate processing delay
+            setTimeout(() => {
+                loading.style.display = 'none';
+                
+                // Find matching answer
+                let matchedAnswer = null;
+                for (const [key, value] of Object.entries(sampleAnswers)) {
+                    if (question.includes(key)) {
+                        matchedAnswer = value;
+                        break;
+                    }
+                }
+                
+                if (matchedAnswer) {
+                    // Show answer
+                    document.getElementById('answerContent').textContent = matchedAnswer.answer;
+                    answerSection.style.display = 'block';
+                    
+                    // Show sources
+                    let sourcesHTML = '';
+                    matchedAnswer.sources.forEach((source, i) => {
+                        sourcesHTML += `
+                            <div class="source-item">
+                                <strong>Source ${i + 1}:</strong> ${source.file} (Page ${source.page})
+                            </div>
+                        `;
+                    });
+                    document.getElementById('sourcesContent').innerHTML = sourcesHTML;
+                    sourcesSection.style.display = 'block';
+                } else {
+                    document.getElementById('answerContent').textContent = "I don't have enough information to answer this question. Please try asking about Python, Machine Learning, Data Science, RAG, or Web Development.";
+                    answerSection.style.display = 'block';
+                    sourcesSection.style.display = 'none';
+                }
+            }, 1500);
+        }
+        
+        // Allow Enter key to submit
+        document.getElementById('questionInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                askQuestion();
+            }
+        });
+    </script>
+</body>
+</html>
