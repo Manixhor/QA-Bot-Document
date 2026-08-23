@@ -221,7 +221,7 @@ Answer:"""
 
         return answer
 
-    def query(self, question: str, k: int = 3) -> Tuple[str, List]:
+    def query(self, question: str, k: int = 3) -> Tuple[str, List, List]:
         """Simple query interface."""
         result = self.generate_answer(question, k)
 

@@ -6,31 +6,21 @@ A Retrieval-Augmented Generation (RAG) powered question answering system that al
 
 This bot reads your documents (PDF, TXT, DOCX), breaks them into searchable chunks, and uses AI to answer your questions while citing the exact source of information.
 
-## 🆓 Free API Options
+## 🆓 Free API: Groq
 
-| Provider | Cost | Speed | Quality | Setup |
-|----------|------|-------|---------|-------|
-| **Google Gemini** | ✅ FREE | Fast | Excellent | Easy |
-| **Groq** | ✅ FREE | Ultra-fast | Great | Easy |
-| **OpenAI** | 💰 Paid | Fast | Excellent | Easy |
+| Feature | Details |
+|---------|---------|
+| **Provider** | Groq |
+| **Cost** | ✅ FREE |
+| **Speed** | Ultra-fast (100+ tokens/sec) |
+| **Limits** | 30 requests per minute |
 
 ### Get Your Free API Key
 
-#### Option 1: Google Gemini (Recommended)
-1. Go to [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
-2. Sign in with Google account
-3. Click "Create API Key"
-4. Copy the key
-
-**Free Limits**: 15 requests/minute, 1M tokens/day
-
-#### Option 2: Groq (Fastest)
 1. Go to [console.groq.com/keys](https://console.groq.com/keys)
 2. Create account (free)
 3. Click "Create API Key"
 4. Copy the key
-
-**Free Limits**: 30 requests/minute
 
 ## 🛠️ Tech Stack
 
@@ -39,8 +29,8 @@ This bot reads your documents (PDF, TXT, DOCX), breaks them into searchable chun
 | Language | Python 3.11+ |
 | Framework | LangChain |
 | Vector DB | ChromaDB |
-| Embeddings | Gemini / Groq / OpenAI |
-| LLM | Gemini 1.5 Flash / Llama 3.3 / GPT-3.5 |
+| Embeddings | HuggingFace (free, local) |
+| LLM | Groq (allam-2-7b) |
 | UI | Streamlit |
 
 ## 📐 Architecture
@@ -58,7 +48,7 @@ This bot reads your documents (PDF, TXT, DOCX), breaks them into searchable chun
 │                                       ▼                     │
 │                              ┌──────────────┐               │
 │                              │  Embeddings  │               │
-│                              │ (Free API)   │               │
+│                              │ (Free, Local)│               │
 │                              └──────────────┘               │
 │                                       │                     │
 │                                       ▼                     │
@@ -69,7 +59,7 @@ This bot reads your documents (PDF, TXT, DOCX), breaks them into searchable chun
 │                                       │                     │
 │                                       ▼                     │
 │  ┌──────────┐    ┌──────────┐    ┌──────────┐              │
-│  │  User    │───▶│ Retriever│───▶│   LLM    │───▶ Answer   │
+│  │  User    │───▶│ Retriever│───▶│  Groq LLM│───▶ Answer   │
 │  │  Query   │    │          │    │ (Free)   │              │
 │  └──────────┘    └──────────┘    └──────────┘              │
 │                                                             │
@@ -87,9 +77,9 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Step 2: Get Free API Key
+### Step 2: Get Free Groq API Key
 ```bash
-# Go to: https://aistudio.google.com/app/apikey
+# Go to: https://console.groq.com/keys
 # Create free API key (no credit card needed!)
 ```
 
@@ -100,9 +90,7 @@ cp .env.example .env
 
 Edit `.env` and add:
 ```
-LLM_PROVIDER=gemini
-EMBEDDING_PROVIDER=gemini
-GOOGLE_API_KEY=your-free-key-here
+GROQ_API_KEY=your-free-key-here
 ```
 
 ### Step 4: Run the App
@@ -125,22 +113,15 @@ streamlit run app.py
 | "How does RAG work?" | ai_large_language_models.txt |
 | "What is web development?" | web_development.txt |
 
-## 💰 Cost Comparison
+## 💰 Cost
 
-| Provider | Cost for Demo | Cost for Production |
-|----------|---------------|---------------------|
-| Gemini | $0.00 | $0.00 (free tier) |
-| Groq | $0.00 | $0.00 (free tier) |
-| OpenAI | ~$0.10 | ~$10-100/month |
+| Use Case | Cost |
+|----------|------|
+| Demo / Learning | $0.00 (free tier) |
+| Production | $0.00 (free tier, 30 req/min) |
 
 ## ⚠️ Free Tier Limits
 
-### Google Gemini
-- 15 requests per minute
-- 1 million tokens per day
-- Perfect for demos and learning
-
-### Groq
 - 30 requests per minute
 - Very fast inference (100+ tokens/sec)
 - Great for real-time apps
@@ -174,4 +155,4 @@ MIT License - Free to use and modify.
 
 ---
 
-**Built with ❤️ using Free APIs**
+**Built with ❤️ using Free APIs (Groq + HuggingFace)**

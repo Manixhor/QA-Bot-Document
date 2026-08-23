@@ -130,20 +130,14 @@ def main():
     """Main application loop."""
     print_header()
     
-    # Check for API key based on provider
-    provider = os.getenv("LLM_PROVIDER", "groq")
-    key_env_map = {
-        "gemini": "GOOGLE_API_KEY",
-        "groq": "GROQ_API_KEY",
-        "openai": "OPENAI_API_KEY",
-    }
-    required_key = key_env_map.get(provider, "OPENAI_API_KEY")
+    # Check for Groq API key
+    required_key = "GROQ_API_KEY"
     
     if not os.environ.get(required_key):
-        print(f"\n⚠️  Warning: {required_key} not set for {provider}.")
+        print(f"\n⚠️  Warning: GROQ_API_KEY not set.")
         print("Please set it in a .env file or environment variable.")
         
-        api_key = input(f"\nEnter your {provider} API key (or press Enter to continue): ").strip()
+        api_key = input("\nEnter your Groq API key (or press Enter to continue): ").strip()
         if api_key:
             os.environ[required_key] = api_key
         else:
