@@ -149,13 +149,28 @@ def main():
                         st.markdown("### 📝 Answer")
                         st.write(result["answer"])
 
-                        st.markdown("### 📚 Sources")
-                        for i, source in enumerate(result["sources"], 1):
-                            filename = source["metadata"].get("source", "Unknown")
-                            page = source["metadata"].get("page", "N/A")
+                        # Only show sources if the bot found relevant information
+                        answer_lower = result["answer"].lower()
+                        not_found_phrases = [
+                            "don't have enough information",
+                            "i don't have enough",
+                            "not enough information",
+                            "cannot answer",
+                            "unable to answer",
+                            "not available in the context",
+                            "not mentioned in the context",
+                            "no information about"
+                        ]
+                        is_not_found = any(phrase in answer_lower for phrase in not_found_phrases)
 
-                            with st.expander(f"Source {i}: {os.path.basename(filename)} (Page {page})"):
-                                st.write(source["content"])
+                        if not is_not_found and result.get("sources"):
+                            st.markdown("### 📚 Sources")
+                            for i, source in enumerate(result["sources"], 1):
+                                filename = source["metadata"].get("source", "Unknown")
+                                page = source["metadata"].get("page", "N/A")
+
+                                with st.expander(f"Source {i}: {os.path.basename(filename)} (Page {page})"):
+                                    st.write(source["content"])
 
                     except Exception as e:
                         st.error(f"Error generating answer: {str(e)}")

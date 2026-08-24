@@ -65,17 +65,32 @@ def ask_question(engine: RAGEngine):
         print("=" * 60)
         print(result["answer"])
         
-        print("\n" + "=" * 60)
-        print("📚 SOURCES:")
-        print("=" * 60)
+        # Only show sources if the bot found relevant information
+        answer_lower = result["answer"].lower()
+        not_found_phrases = [
+            "don't have enough information",
+            "i don't have enough",
+            "not enough information",
+            "cannot answer",
+            "unable to answer",
+            "not available in the context",
+            "not mentioned in the context",
+            "no information about"
+        ]
+        is_not_found = any(phrase in answer_lower for phrase in not_found_phrases)
         
-        for i, source in enumerate(result["sources"], 1):
-            filename = source["metadata"].get("source", "Unknown")
-            page = source["metadata"].get("page", "N/A")
-            print(f"\nSource {i}: {os.path.basename(filename)} (Page {page})")
-            print("-" * 40)
-            content = source["content"][:300] + "..." if len(source["content"]) > 300 else source["content"]
-            print(content)
+        if not is_not_found and result.get("sources"):
+            print("\n" + "=" * 60)
+            print("📚 SOURCES:")
+            print("=" * 60)
+            
+            for i, source in enumerate(result["sources"], 1):
+                filename = source["metadata"].get("source", "Unknown")
+                page = source["metadata"].get("page", "N/A")
+                print(f"\nSource {i}: {os.path.basename(filename)} (Page {page})")
+                print("-" * 40)
+                content = source["content"][:300] + "..." if len(source["content"]) > 300 else source["content"]
+                print(content)
         
         print("\n" + "=" * 60)
         
