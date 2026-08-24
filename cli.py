@@ -182,5 +182,5 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\n👋 Goodbye!")
+        print("\n\n👋 Goodbye! Have a good day! Thank you")
         sys.exit(0)

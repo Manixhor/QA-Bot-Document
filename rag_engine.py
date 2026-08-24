@@ -118,9 +118,7 @@ class RAGEngine:
         # Remove old store to avoid readonly DB errors
         if os.path.exists(VECTOR_STORE_PATH):
             shutil.rmtree(VECTOR_STORE_PATH, ignore_errors=True)
-            time.sleep(0.5)
-
-        os.makedirs(VECTOR_STORE_PATH, exist_ok=True)
+            time.sleep(1)
 
         self.vector_store = Chroma.from_documents(
             documents=chunks,
@@ -148,6 +146,7 @@ class RAGEngine:
         except Exception as e:
             if "readonly" in str(e).lower() or "locked" in str(e).lower():
                 print("  ⚠️ Database locked, re-ingesting documents...")
+                self.vector_store = None
                 self.ingest()
             else:
                 raise
