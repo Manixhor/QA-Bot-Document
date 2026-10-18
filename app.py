@@ -27,6 +27,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# On Streamlit Community Cloud, secrets come from st.secrets instead of a .env file
+if not os.getenv("GROQ_API_KEY"):
+    try:
+        os.environ["GROQ_API_KEY"] = str(st.secrets["GROQ_API_KEY"])
+    except Exception:
+        pass  # No .env and no st.secrets yet; user can paste key in the sidebar
+
 # Page config must be first Streamlit command
 st.set_page_config(
     page_title="Document Q&A Bot",

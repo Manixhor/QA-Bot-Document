@@ -1,6 +1,9 @@
 # RAG Document Q&A Bot - Requirements
 # Python 3.11+
 
+# CPU-only PyTorch wheels (~200MB instead of ~3GB CUDA wheels)
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 # Core
 streamlit>=1.30.0
 python-dotenv>=1.0.0
