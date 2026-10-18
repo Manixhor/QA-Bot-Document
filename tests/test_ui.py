@@ -18,6 +18,9 @@ class FakeEngine:
     def ingest(self, paths):
         self.chunk_count = 12
 
+    def browse(self, source, limit=3):
+        return [{"content": "A preview without a question.", "metadata": {"source": source}}]
+
     def retrieve(self, question, k=3):
         self.questions.append((question, k))
         return [Document(page_content="Python is a programming language.", metadata={"source": "python.txt", "page": 0})]
@@ -103,3 +106,25 @@ class UITests(unittest.TestCase):
             self.assertFalse(app.session_state['ingested'])
             self.assertTrue(button(app, 'Search documents ↗').disabled)
             self.assertTrue(app.error)
+
+    def test_browse_documents_needs_no_question_or_key(self):
+        with patch.dict(os.environ, {'GROQ_API_KEY': ''}), patch('rag_engine.RAGEngine', FakeEngine):
+            app = AppTest.from_file(APP).run()
+            self.assertTrue(any('QA Bot Analysis' in h.value for h in app.sidebar.markdown))
+            button(app, 'Process documents').click().run()
+            app.radio[0].set_value('Browse documents').run()
+            self.assertEqual(len(app.text_area), 0)
+            self.assertFalse(button(app, 'Preview document ↗').disabled)
+            button(app, 'Preview document ↗').click().run()
+            self.assertFalse(app.exception)
+            self.assertEqual(app.session_state['history'][-1]['mode'], 'Browse documents')
+            self.assertEqual(app.session_state['history'][-1]['sources'][0]['content'], 'A preview without a question.')
+
+    def test_custom_question_survives_browse_mode(self):
+        with patch.dict(os.environ, {'GROQ_API_KEY': ''}):
+            app = AppTest.from_file(APP).run()
+            app.text_area[0].input('What are the applications of machine learning?').run()
+            app.radio[0].set_value('Browse documents').run()
+            app.radio[0].set_value('Source search').run()
+            self.assertEqual(app.text_area[0].value, 'What are the applications of machine learning?')
+            self.assertFalse(app.exception)

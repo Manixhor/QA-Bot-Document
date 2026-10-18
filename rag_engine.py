@@ -186,6 +186,19 @@ class RAGEngine:
             self.load_vector_store()
         return self.vector_store.similarity_search(query.strip(), k=k)
 
+    def browse(self, source: str, limit: int = 3):
+        """Preview the first indexed passages in a document without a query or LLM."""
+        if not isinstance(source, str) or not source.strip():
+            raise ValueError("Choose a document to preview.")
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 10:
+            raise ValueError("Choose between 1 and 10 passages.")
+        if self.vector_store is None:
+            self.load_vector_store()
+        result = self.vector_store.get(where={"source": source}, limit=limit,
+                                       include=["documents", "metadatas"])
+        return [{"content": text, "metadata": metadata or {}}
+                for text, metadata in zip(result["documents"], result["metadatas"])]
+
     def ingest(self, data_paths: List[str] = None) -> None:
         """Full ingestion pipeline: load → chunk → embed → store."""
         print("\n" + "=" * 50)

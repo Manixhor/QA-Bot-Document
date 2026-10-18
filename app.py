@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from storage import SAMPLE_DIR, save_upload
 
 load_dotenv()
-st.set_page_config(page_title="Folio · Document Q&A", page_icon="📖", layout="wide")
+st.set_page_config(page_title="QA Bot Analysis", page_icon="📖", layout="wide")
 if not os.getenv("GROQ_API_KEY"):
     try:
         os.environ["GROQ_API_KEY"] = str(st.secrets["GROQ_API_KEY"])
@@ -22,17 +22,24 @@ EXAMPLES = ["What is Python?", "Explain the types of machine learning.",
 
 
 def initialize_session_state():
-    defaults = {"rag_engine": None, "ingested": False, "history": [], "question": "",
+    defaults = {"rag_engine": None, "ingested": False, "history": [], "question_draft": "",
                 "needs_index": False, "include_samples": True}
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
+    if "question" not in st.session_state:
+        st.session_state.question = st.session_state.question_draft
     if "workspace" not in st.session_state:
-        st.session_state.workspace = tempfile.TemporaryDirectory(prefix="folio-")
+        st.session_state.workspace = tempfile.TemporaryDirectory(prefix="qa-bot-")
 
 
 def select_question(question):
     st.session_state.question = question
+    st.session_state.question_draft = question
+
+
+def remember_question():
+    st.session_state.question_draft = st.session_state.question
 
 
 def invalidate_index():
@@ -40,9 +47,9 @@ def invalidate_index():
 
 
 def show_answer(entry):
-    st.markdown("#### Your question")
+    st.markdown("#### Document preview" if entry.get("mode") == "Browse documents" else "#### Your question")
     st.write(entry["question"])
-    st.markdown("#### Matching passages" if entry.get("mode") == "Source search" else "#### Answer")
+    st.markdown("#### Matching passages" if entry.get("mode") in ("Source search", "Browse documents") else "#### Answer")
     st.write(entry["answer"])
     if entry.get("sources"):
         st.caption("RETRIEVED PASSAGES · Review these to check the answer")
@@ -62,8 +69,8 @@ def main():
     workspace = Path(st.session_state.workspace.name)
     upload_dir = workspace / 'uploads'
     with st.sidebar:
-        st.markdown("## ◈ folio")
-        st.caption("YOUR DOCUMENT WORKSPACE")
+        st.markdown("## QA Bot Analysis")
+        st.caption("Ask questions. Explore your documents.")
         st.divider()
         st.subheader("1. Add your documents")
         uploads = st.file_uploader("Upload documents", type=['pdf', 'txt', 'docx'],
@@ -99,7 +106,7 @@ def main():
                     st.session_state.rag_engine = engine
                     st.session_state.ingested = True
                     st.session_state.needs_index = False
-                    st.success("Documents are ready. Ask a question.")
+                    st.success("Documents are ready. Ask any question or browse their text.")
                 except Exception as error:
                     logging.exception("Document processing failed")
                     if isinstance(error, (ValueError, FileNotFoundError)):
@@ -116,7 +123,7 @@ def main():
         st.caption("More passages add context but may take longer.")
         st.caption("Uploads and search indexes are isolated to this browser session. Relevant passages are sent to Groq when you ask a question.")
 
-    st.markdown('<div class="eyebrow">DOCUMENT INTELLIGENCE / FOLIO</div>', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">QA BOT ANALYSIS / DOCUMENT INTELLIGENCE</div>', unsafe_allow_html=True)
     st.markdown("<h1>Your documents.<br>Clearer answers.</h1>", unsafe_allow_html=True)
     st.markdown("Find the details that matter. Ask a question, get a grounded answer, and explore the source.")
     ready = st.session_state.ingested and not st.session_state.needs_index
@@ -131,24 +138,42 @@ def main():
         st.info("Start with the sample library, or add your own files. Then select Process documents in the sidebar.")
     if not os.getenv("GROQ_API_KEY"):
         st.info("Source search works without an API key. For AI-written answers, add GROQ_API_KEY to .env or Streamlit secrets.")
-    st.subheader("2. Ask your documents")
-    mode = st.radio("Response type", ["AI answer", "Source search"],
+    st.subheader("2. Explore your documents")
+    mode = st.radio("Response type", ["AI answer", "Source search", "Browse documents"],
                     index=0 if os.getenv("GROQ_API_KEY") else 1, horizontal=True,
-                    help="AI answer writes a response with Groq. Source search shows document passages locally.")
-    st.caption("Get an answer with citations." if mode == "AI answer" else
-               "Find the closest document passages. Your question and passages stay on this server.")
-    st.text_area("Your question", key="question", height=110, max_chars=4000,
-                 placeholder="What are the key ideas in these documents?")
-    action = "Find my answer ↗" if mode == "AI answer" else "Search documents ↗"
+                    help="AI answer writes a response. Source search finds original passages for your question. Browse documents previews text without a question.")
+    descriptions = {
+        "AI answer": "Type any question about your documents. The bot writes an answer with source citations. Example questions are optional.",
+        "Source search": "Type your own question or keywords to find matching text from your documents. This shows original passages, not an AI-written answer. No API key is needed.",
+        "Browse documents": "No question yet? Choose a document to preview its first passages. No API key is needed.",
+    }
+    st.caption(descriptions[mode])
+    selected_source = None
+    if mode == "Browse documents":
+        selected_source = st.selectbox("Document to preview", sorted(files), index=0 if files else None,
+                                       placeholder="Add a document first", disabled=not ready)
+    else:
+        st.text_area("Your question", key="question", height=110, max_chars=4000, on_change=remember_question,
+                     placeholder="Type your own question or keywords here. Examples below are optional.")
+    action = {"AI answer": "Find my answer ↗", "Source search": "Search documents ↗",
+              "Browse documents": "Preview document ↗"}[mode]
     if st.button(action, type="primary", disabled=not ready or (mode == "AI answer" and not os.getenv("GROQ_API_KEY"))):
-        question = st.session_state.question.strip()
+        question = selected_source if mode == "Browse documents" else st.session_state.question.strip()
         if not question:
-            st.warning("Enter a question first.")
+            st.warning("Choose a document first." if mode == "Browse documents" else
+                       "Type any question or keywords, pick an example, or switch to Browse documents if you don't have a question yet.")
         else:
-            with st.spinner("Searching your documents…" if mode == "Source search" else "Finding passages and writing your answer…"):
+            with st.spinner("Reading document passages…" if mode == "Browse documents" else "Searching your documents…" if mode == "Source search" else "Finding passages and writing your answer…"):
                 try:
                     engine = st.session_state.rag_engine
-                    if mode == "Source search":
+                    if mode == "Browse documents":
+                        sources = engine.browse(str(files[selected_source]), limit=k)
+                        result = {
+                            "answer": f"Previewing the first {len(sources)} indexed passages from {selected_source}. This is original document text, not an AI summary." if sources else
+                                      "No indexed text found for this document. It may be unreadable or scanned. Check processing messages or choose another file.",
+                            "sources": sources,
+                        }
+                    elif mode == "Source search":
                         documents = engine.retrieve(question, k=k)
                         result = {
                             "answer": f"Found {len(documents)} matching passages. Expand the sources below to read them. These are search results, not an AI-generated answer." if documents else "No passages found. Try another question or process your documents again.",
@@ -162,23 +187,23 @@ def main():
                     logging.exception("Answer generation failed")
                     if isinstance(error, (ValueError, FileNotFoundError)):
                         st.error(str(error))
-                    elif mode == "Source search":
+                    elif mode in ("Source search", "Browse documents"):
                         st.error("Could not search the index. Process documents again and retry.")
                     else:
                         st.error("Could not generate an answer. Check your API key, connection and provider limits, then retry. You can also switch to Source search.")
-    if not st.session_state.history:
-        st.caption("NEED A STARTING POINT?")
+    if not st.session_state.history and mode != "Browse documents":
+        st.caption("OPTIONAL EXAMPLES · You can also type your own question")
         for example in EXAMPLES:
             st.button(example, on_click=select_question, args=(example,), use_container_width=True)
-    else:
+    if st.session_state.history:
         st.divider()
-        st.subheader("3. Answer & evidence")
+        st.subheader("3. Results & sources")
         show_answer(st.session_state.history[-1])
         transcript = '\n\n'.join(f"Question: {entry['question']}\nMode: {entry.get('mode', 'AI answer')}\n\n{entry['answer']}\n\nSources:\n" +
                                  '\n'.join(f"[{i}] {Path(s['metadata'].get('source', 'Unknown')).name}\n{s['content']}"
                                            for i, s in enumerate(entry.get('sources', []), 1))
                                  for entry in st.session_state.history)
-        st.download_button("Download conversation", transcript, file_name="folio-answers.txt", mime="text/plain", on_click="ignore")
+        st.download_button("Download conversation", transcript, file_name="qa-bot-analysis.txt", mime="text/plain", on_click="ignore")
         if st.button("Clear conversation"):
             st.session_state.history = []
             st.rerun()
@@ -188,7 +213,7 @@ def main():
                     show_answer(entry)
                     st.divider()
     st.divider()
-    st.caption("FOLIO · Search locally. Generate answers with Groq. Check source passages for important details.")
+    st.caption("QA BOT ANALYSIS · Search locally. Generate answers with Groq. Check source passages for important details.")
 
 
 if __name__ == '__main__':

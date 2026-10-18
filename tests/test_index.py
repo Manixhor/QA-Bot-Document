@@ -49,3 +49,18 @@ class IndexTests(unittest.TestCase):
             self.assertEqual(engine.retrieve('Python', 1)[0].page_content, 'Python original.')
             reloaded = RAGEngine(persist_directory=directory, embeddings=TopicEmbeddings())
             self.assertEqual(reloaded.retrieve('Python', 1)[0].page_content, 'Python original.')
+
+    def test_browse_filters_document_without_query(self):
+        with tempfile.TemporaryDirectory() as directory:
+            engine = RAGEngine(persist_directory=directory, embeddings=TopicEmbeddings())
+            engine.create_vector_store([
+                Document(page_content='Python passage.', metadata={'source': 'python.txt', 'page': 0}),
+                Document(page_content='Cloud passage.', metadata={'source': 'cloud.txt'}),
+            ])
+            result = engine.browse('python.txt', limit=2)
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result[0]['content'], 'Python passage.')
+            self.assertEqual(result[0]['metadata']['page'], 0)
+            self.assertEqual(engine.browse('missing.txt'), [])
+            with self.assertRaises(ValueError):
+                engine.browse('python.txt', limit=0)

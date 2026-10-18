@@ -1,4 +1,4 @@
-# 📚 Document Q&A Bot
+# QA Bot Analysis
 
 A Retrieval-Augmented Generation (RAG) powered question answering system that allows users to ask natural language questions about their documents and receive accurate answers with source citations.
 
@@ -237,7 +237,7 @@ MIT License - Free to use and modify.
 **Built with ❤️ using Free APIs (Groq + HuggingFace)**
 
 
-## Updated Folio workspace
+## QA Bot Analysis workspace
 
 The working application is `app.py` (Streamlit). `index.html` is an older standalone demo and is not the deployed UI.
 
@@ -263,3 +263,8 @@ UI tests use Streamlit AppTest, and provider responses are mocked. Vector-store 
 To run the complete browser workflow, start `./start_server.sh --server.port 8503`, make Playwright available to Node.js, and run `node tests/browser.cjs`. The test uploads a TXT document, creates a real index, searches its passages, downloads the result, clears history, and checks mobile, tablet and desktop widths. The first indexing run downloads the embedding model. `QA_TEST_URL` and `PLAYWRIGHT_EXECUTABLE_PATH` optionally override the server and browser paths.
 
 Source-file watching is disabled because scanning Transformers modules can import optional vision dependencies. Restart the preview after editing Python source files during development.
+
+
+### Explore without a prepared question
+
+You can type any question about your documents; the example buttons are optional. **Source search** finds matching original passages for a question or keywords without writing an AI answer. **Browse documents** previews the first indexed passages in a selected file without a question or API key. Process documents first, then choose the file and select **Preview document**. The passage slider controls the preview length (up to ten passages). Your draft question is preserved when switching modes.

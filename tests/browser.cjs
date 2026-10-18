@@ -32,7 +32,7 @@ const assert = require('node:assert/strict');
     console.log('Source passage verified');
     const download = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Download conversation' }).click();
-    assert.equal((await download).suggestedFilename(), 'folio-answers.txt');
+    assert.equal((await download).suggestedFilename(), 'qa-bot-analysis.txt');
     console.log('Download verified');
     await page.waitForFunction(() => !document.querySelector('[data-stale="true"]'));
     for (const width of [320, 375, 768, 1440]) {
