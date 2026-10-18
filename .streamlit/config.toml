@@ -1,8 +1,8 @@
 [server]
 headless = true
 maxUploadSize = 20
-# Model libraries use lazy imports; disable module scanning to avoid loading optional vision dependencies.
-fileWatcherType = "none"
+# Poll for source updates so Streamlit Cloud picks up GitHub releases.
+fileWatcherType = "poll"
 
 [browser]
 gatherUsageStats = false

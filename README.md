@@ -262,7 +262,7 @@ UI tests use Streamlit AppTest, and provider responses are mocked. Vector-store 
 
 To run the complete browser workflow, start `./start_server.sh --server.port 8503`, make Playwright available to Node.js, and run `node tests/browser.cjs`. The test uploads a TXT document, creates a real index, searches its passages, downloads the result, clears history, and checks mobile, tablet and desktop widths. The first indexing run downloads the embedding model. `QA_TEST_URL` and `PLAYWRIGHT_EXECUTABLE_PATH` optionally override the server and browser paths.
 
-Source-file watching is disabled because scanning Transformers modules can import optional vision dependencies. Restart the preview after editing Python source files during development.
+Source files are polled for changes so Streamlit Cloud can apply GitHub updates. For local debugging, source watching can be disabled temporarily with `--server.fileWatcherType none`.
 
 
 ### Explore without a prepared question
