@@ -32,7 +32,7 @@ This bot reads your documents (PDF, TXT, DOCX), breaks them into searchable chun
 | Framework | LangChain | >=0.3.0 |
 | Vector DB | ChromaDB | >=0.2.0 |
 | Embeddings | HuggingFace (all-MiniLM-L6-v2) | >=0.1.0 |
-| LLM | Groq (allam-2-7b) | >=0.2.0 |
+| LLM | Groq (openai/gpt-oss-20b) | >=0.2.0 |
 | UI | Streamlit | >=1.30.0 |
 | Text Splitter | LangChain RecursiveCharacterTextSplitter | >=0.3.0 |
 | Document Loaders | PyPDF, Docx2txt | >=4.0.0, >=0.8.0 |
@@ -121,18 +121,11 @@ The app runs for free on [Streamlit Community Cloud](https://share.streamlit.io)
    ```
 3. Deploy (first build ≈ 5–10 min, CPU-only PyTorch download)
 
-**Read-only filesystem handling (`storage.py`):**
+**Storage and session isolation:**
 
-Streamlit Cloud's app directory is read-only (only `/tmp` is writable). `storage.py` detects this at startup and redirects all writes:
+Each web session uses its own temporary directory for uploads and its Chroma index. The bundled `data/` library is read without modification. Web uploads are never written into another session's workspace. Temporary workspaces do not survive a server restart; process documents again after restarting or starting a new session.
 
-| Host | Base dir | Vector store | Uploads |
-|------|----------|--------------|---------|
-| Local | project dir | `./vector_store/` | `./data/` |
-| Streamlit Cloud | `/tmp` | `/tmp/vector_store/` | `/tmp/data/` |
-
-This prevents the SQLite `attempt to write a readonly database` error.
-
-**⚠️ Ephemeral storage:** `/tmp` is wiped on every restart, redeploy, or sleep. After any restart, click **"Ingest Documents"** again — it takes just a few seconds since the sample documents ship with the repo.
+The command-line interface uses project-relative `data/` and `vector_store/` directories. If the project is read-only, `storage.py` selects a temporary writable base directory for the CLI instead.
 
 ## 🧩 Chunking Strategy
 
@@ -157,7 +150,7 @@ RecursiveCharacterTextSplitter is the most widely recommended strategy for RAG p
 
 ### Vector Database: ChromaDB
 
-- **Persistence**: Stored at `storage.VECTOR_STORE_PATH` — `./vector_store/` locally, `/tmp/vector_store/` on Streamlit Cloud
+- **Persistence**: Stored at `storage.VECTOR_STORE_PATH` — the project directory for the CLI, an isolated temporary workspace for each web session
 - **Why?** ChromaDB is lightweight, easy to set up, and integrates natively with LangChain. It persists embeddings to disk so the vector store survives restarts without re-indexing. Unlike FAISS, it provides a simpler API for metadata filtering. Unlike Qdrant/Weaviate, it requires no separate server — it runs in-process.
 
 ## 💡 Example Queries
@@ -189,6 +182,8 @@ RecursiveCharacterTextSplitter is the most widely recommended strategy for RAG p
 rag-document-qa/
 ├── data/                    # Your documents
 ├── vector_store/            # ChromaDB (auto-created)
+├── static/style.css         # Responsive workspace styling
+├── tests/                   # Engine, Chroma and Streamlit UI checks
 ├── app.py                   # Streamlit UI
 ├── cli.py                   # CLI interface
 ├── rag_engine.py            # Core RAG pipeline
@@ -240,3 +235,31 @@ MIT License - Free to use and modify.
 ---
 
 **Built with ❤️ using Free APIs (Groq + HuggingFace)**
+
+
+## Updated Folio workspace
+
+The working application is `app.py` (Streamlit). `index.html` is an older standalone demo and is not the deployed UI.
+
+- Responsive green and cream workspace with document counts, processing status, and source previews.
+- Each web session has its own temporary upload directory and vector index. Bundled samples are optional; uploaded files with the same filename take precedence. Session workspaces are temporary and are removed when their session state is released; they do not survive server restarts.
+- PDF, UTF-8 TXT and DOCX uploads are limited to 20 MB each. Scanned PDFs require OCR before uploading.
+- Process documents after changing the library. Re-indexing builds a new collection before switching to it, preserving the previous index on failure.
+- Choose **Source search** to read matching document passages without an API key, or **AI answer** for a generated answer with citations. Ingestion and retrieval do not require a Groq key. Answer generation requires `GROQ_API_KEY`; `GROQ_MODEL` optionally overrides the default `openai/gpt-oss-20b`.
+- Example questions fill the editor. The latest 20 answers and their full retrieved passages remain visible across interactions and can be downloaded. Questions are independent; earlier conversation turns are not sent to the model.
+- Relevant document passages are sent to Groq for answer generation. Embeddings run locally.
+
+Run from any location with `./start_server.sh` (the script resolves the project directory). Python 3.11+ is recommended; create `.venv`, install `requirements.txt`, then optionally add a Groq key to `.env` for AI answers. Source search works without a key.
+
+### Verification
+
+```sh
+.venv/bin/python -m unittest discover -s tests -v
+```
+
+UI tests use Streamlit AppTest, and provider responses are mocked. Vector-store integration tests use real Chroma with deterministic local test embeddings, so they require no model download or API credentials. A full live-provider check additionally needs a valid Groq key and the HuggingFace embedding model download.
+
+
+To run the complete browser workflow, start `./start_server.sh --server.port 8503`, make Playwright available to Node.js, and run `node tests/browser.cjs`. The test uploads a TXT document, creates a real index, searches its passages, downloads the result, clears history, and checks mobile, tablet and desktop widths. The first indexing run downloads the embedding model. `QA_TEST_URL` and `PLAYWRIGHT_EXECUTABLE_PATH` optionally override the server and browser paths.
+
+Source-file watching is disabled because scanning Transformers modules can import optional vision dependencies. Restart the preview after editing Python source files during development.

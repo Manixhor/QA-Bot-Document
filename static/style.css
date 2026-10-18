@@ -1,0 +1,31 @@
+:root { --folio-ink: #173c37; --folio-green: #236b58; }
+.stApp { background: #f5f7f2; color: var(--folio-ink); }
+[data-testid="stSidebar"] { background: #eaf0e7; border-right: 1px solid #d9e2d6; }
+.block-container { max-width: 1120px; padding-top: 3rem; padding-bottom: 2rem; }
+h1 { font-family: Georgia, serif !important; font-size: clamp(2.25rem, 4.5vw, 3.8rem) !important; font-weight: 400 !important; letter-spacing: -1.5px; line-height: 1.12 !important; white-space: pre-line; }
+h2, h3 { color: var(--folio-ink); letter-spacing: -.5px; }
+.eyebrow { font-size: .7rem; letter-spacing: 2.2px; font-weight: 700; color: var(--folio-green); margin-bottom: 16px; }
+[data-testid="stVerticalBlockBorderWrapper"] { background: #fff; border-radius: 14px; }
+[data-testid="stMetricLabel"] { color: #5b7169; }
+[data-testid="stMetricValue"] { font-size: clamp(1.15rem, 2.5vw, 1.8rem); color: var(--folio-green); }
+.stButton button, .stDownloadButton button { border-radius: 9px; min-height: 46px; }
+.stButton button[kind="primary"] { background: #236b58; border-color: #236b58; color: white; }
+.stButton button[kind="secondary"] { border-color: #d6e1d7; text-align: left; }
+.stTextArea textarea { font-size: 16px; border-radius: 10px; }
+[data-testid="stExpander"] { background: #fff; border-radius: 10px; }
+button:focus-visible, textarea:focus-visible { outline: 3px solid #65a58d !important; outline-offset: 2px; }
+@media (max-width: 640px) {
+ .block-container { padding: 2rem 1rem; }
+ h1 { letter-spacing: -1px; }
+ [data-testid="stHorizontalBlock"] { flex-wrap: wrap; gap: .75rem; }
+ [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] { min-width: 120px; flex: 1 1 120px; }
+ .stButton button, .stDownloadButton button { width: 100%; }
+}
+
+[data-testid="stRadio"] [role="radiogroup"] { gap: .6rem; flex-wrap: wrap; }
+[data-testid="stRadio"] [data-baseweb="radio"] { background: #fff; border: 1px solid #d6e1d7; border-radius: 9px; padding: .45rem .8rem; margin: 0; min-height: 44px; }
+.stButton button:disabled { opacity: .55; cursor: not-allowed; }
+[data-testid="stSidebar"] [data-testid="stText"] { overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+ [data-testid="stRadio"] [role="radiogroup"] { flex-direction: column; align-items: stretch; }
+}

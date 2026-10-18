@@ -1,34 +1,36 @@
-"""
-Storage paths - single source of truth for where the app writes data.
-
-On hosts with a read-only filesystem (e.g. Streamlit Community Cloud), the app
-directory cannot be written to. Only /tmp is writable there (ephemeral: wiped
-when the app restarts or wakes from sleep). Locally, nothing changes: we keep
-using the project directory.
-"""
-
-import os
+"""Project-relative defaults and isolated, temporary web-session workspaces."""
+from pathlib import Path
 import tempfile
 
+PROJECT_DIR = Path(__file__).resolve().parent
+SAMPLE_DIR = PROJECT_DIR / 'data'
 
-def _writable(path: str) -> bool:
-    """Check whether a directory is writable by probing a temp file."""
+
+def _writable(path):
     try:
-        os.makedirs(path, exist_ok=True)
-        probe = os.path.join(path, ".write_probe")
-        with open(probe, "w") as f:
-            f.write("ok")
-        os.remove(probe)
-        return True
+        with tempfile.TemporaryFile(dir=path):
+            return True
     except OSError:
         return False
 
 
-# Writable base dir: the project dir locally, /tmp on read-only hosts
-WORK_DIR = "." if _writable(".") else tempfile.gettempdir()
+WORK_DIR = PROJECT_DIR if _writable(PROJECT_DIR) else Path(tempfile.gettempdir()) / 'document-qa'
+DATA_DIR = str(WORK_DIR / 'data')
+VECTOR_STORE_PATH = str(WORK_DIR / 'vector_store')
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 
-# Where user uploads are saved (bundled sample docs stay in ./data)
-DATA_DIR = os.path.join(WORK_DIR, "data")
 
-# ChromaDB vector store - must be writable, hence WORK_DIR-based
-VECTOR_STORE_PATH = os.path.join(WORK_DIR, "vector_store")
+def save_upload(directory, name, content):
+    """Save supported uploads inside their workspace; return whether bytes changed."""
+    if not name or '/' in name or '\\' in name or Path(name).name != name:
+        raise ValueError('Please use a filename without folder separators.')
+    if Path(name).suffix.lower() not in {'.pdf', '.txt', '.docx'}:
+        raise ValueError('Supported formats are PDF, TXT and DOCX.')
+    if not content or len(content) > MAX_UPLOAD_BYTES:
+        raise ValueError('Each document must be nonempty and smaller than 20 MB.')
+    target = Path(directory) / name
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.is_file() and target.read_bytes() == content:
+        return False
+    target.write_bytes(content)
+    return True

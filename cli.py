@@ -5,6 +5,7 @@ An interactive CLI for asking questions about your documents.
 
 import os
 import sys
+from getpass import getpass
 from rag_engine import RAGEngine
 from storage import VECTOR_STORE_PATH
 from dotenv import load_dotenv
@@ -153,7 +154,7 @@ def main():
         print(f"\n⚠️  Warning: GROQ_API_KEY not set.")
         print("Please set it in a .env file or environment variable.")
         
-        api_key = input("\nEnter your Groq API key (or press Enter to continue): ").strip()
+        api_key = getpass("\nEnter your Groq API key (or press Enter to continue): ").strip()
         if api_key:
             os.environ[required_key] = api_key
         else:

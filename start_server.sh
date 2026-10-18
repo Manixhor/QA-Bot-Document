@@ -1,4 +1,10 @@
-#!/bin/bash
-cd /Users/mani/Documents/bookxpert
-source venv/bin/activate
-streamlit run app.py --server.port 8501 --server.headless true
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")"
+if [ -x .venv/bin/python ]; then
+  exec .venv/bin/python -m streamlit run app.py "$@"
+elif [ -x venv/bin/python ]; then
+  exec venv/bin/python -m streamlit run app.py "$@"
+else
+  exec python3 -m streamlit run app.py "$@"
+fi
