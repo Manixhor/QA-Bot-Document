@@ -18,9 +18,9 @@ const assert = require('node:assert/strict');
     await page.locator('input[type=file]').setInputFiles({ name: 'release.txt', mimeType: 'text/plain',
       buffer: Buffer.from('The Folio release code is AZURE-742. The release coordinator is Morgan. The launch is planned for November.') });
     await page.getByText('Document library · 1 file', { exact: true }).waitFor();
+    await page.getByText('Source search', { exact: true }).click();
     console.log('Upload selected');
     await page.getByRole('button', { name: 'Process documents', exact: true }).click();
-    await page.getByText('Source search', { exact: true }).click();
     const search = page.getByRole('button', { name: 'Search documents ↗', exact: true });
     await search.waitFor();
     await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => button.textContent.includes('Search documents') && !button.disabled), null, { timeout: 120000 });
