@@ -27,12 +27,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# On Streamlit Community Cloud, secrets come from st.secrets instead of a .env file
+# Built-in default key so the app works out of the box (no setup needed)
+BUILTIN_GROQ_API_KEY = "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"
+
+# Priority: .env (local) -> st.secrets (Streamlit Cloud) -> built-in default
 if not os.getenv("GROQ_API_KEY"):
     try:
         os.environ["GROQ_API_KEY"] = str(st.secrets["GROQ_API_KEY"])
     except Exception:
-        pass  # No .env and no st.secrets yet; user can paste key in the sidebar
+        os.environ["GROQ_API_KEY"] = BUILTIN_GROQ_API_KEY
 
 # Page config must be first Streamlit command
 st.set_page_config(
@@ -60,18 +63,6 @@ def main():
 
     # Sidebar
     with st.sidebar:
-        # Groq API Key (auto-loaded from .env)
-        default_key = os.getenv("GROQ_API_KEY", "")
-        api_key = st.text_input(
-            "🔑 Groq API Key",
-            value=default_key,
-            type="password",
-        )
-        if api_key:
-            os.environ["GROQ_API_KEY"] = api_key
-
-        st.divider()
-
         # Document Ingestion
         uploaded_files = st.file_uploader(
             "📤 Upload documents",
@@ -94,19 +85,16 @@ def main():
             st.success(f"✅ Uploaded {len(uploaded_files)} file(s)")
 
         if st.button("📥 Ingest Documents", type="primary"):
-            if not api_key:
-                st.error("Please enter your Groq API key first!")
-            else:
-                with st.spinner("Processing..."):
-                    try:
-                        from rag_engine import RAGEngine
-                        engine = RAGEngine()
-                        engine.ingest()
-                        st.session_state.rag_engine = engine
-                        st.session_state.ingested = True
-                        st.success("✅ Ready!")
-                    except Exception as e:
-                        st.error(f"Error: {str(e)}")
+            with st.spinner("Processing..."):
+                try:
+                    from rag_engine import RAGEngine
+                    engine = RAGEngine()
+                    engine.ingest()
+                    st.session_state.rag_engine = engine
+                    st.session_state.ingested = True
+                    st.success("✅ Ready!")
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
 
         if st.session_state.ingested:
             st.success("✅ Documents ready")
