@@ -27,15 +27,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Built-in default key so the app works out of the box (no setup needed)
-BUILTIN_GROQ_API_KEY = "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"
-
-# Priority: .env (local) -> st.secrets (Streamlit Cloud) -> built-in default
+# Load Groq API key: .env (local dev) -> st.secrets (Streamlit Cloud). Never hardcode keys!
 if not os.getenv("GROQ_API_KEY"):
     try:
         os.environ["GROQ_API_KEY"] = str(st.secrets["GROQ_API_KEY"])
     except Exception:
-        os.environ["GROQ_API_KEY"] = BUILTIN_GROQ_API_KEY
+        pass  # Key will be added via Streamlit Cloud secrets or a local .env file
 
 # Page config must be first Streamlit command
 st.set_page_config(
