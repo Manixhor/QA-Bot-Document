@@ -157,13 +157,15 @@ def main():
     st.caption(descriptions[mode])
     selected_source = None
     search_source = None
+    search_scope = "All processed documents"
     if mode == "Browse documents":
         selected_source = st.selectbox("Document to preview", sorted(files), index=0 if files else None,
                                        placeholder="Add a document first", disabled=not ready)
     else:
-        search_scope = st.selectbox("Search within", ["All processed documents", *sorted(files)], disabled=not ready)
-        if search_scope != "All processed documents":
-            search_source = str(files[search_scope])
+        if mode == "Source search":
+            search_scope = st.selectbox("Search within", ["All processed documents", *sorted(files)], disabled=not ready)
+            if search_scope != "All processed documents":
+                search_source = str(files[search_scope])
         st.text_area("Your question", key="question", height=110, max_chars=4000, on_change=remember_question,
                      placeholder="Type your own question or keywords here. Examples below are optional.")
     action = {"AI answer": "Find my answer ↗", "Source search": "Search documents ↗",
