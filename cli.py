@@ -6,6 +6,7 @@ An interactive CLI for asking questions about your documents.
 import os
 import sys
 from rag_engine import RAGEngine
+from storage import VECTOR_STORE_PATH
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -162,7 +163,7 @@ def main():
     engine = RAGEngine()
     
     # Check if vector store exists
-    if os.path.exists("./vector_store"):
+    if os.path.exists(VECTOR_STORE_PATH):
         print("\n✅ Found existing vector store.")
         try:
             engine.load_vector_store()

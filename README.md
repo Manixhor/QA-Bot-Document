@@ -2,6 +2,8 @@
 
 A Retrieval-Augmented Generation (RAG) powered question answering system that allows users to ask natural language questions about their documents and receive accurate answers with source citations.
 
+🌐 **Live app:** [app-bot-document on Streamlit Community Cloud](https://app-bot-document-f4vzh3ghty7n23j6gmzbse.streamlit.app)
+
 ## 🎯 What It Does
 
 This bot reads your documents (PDF, TXT, DOCX), breaks them into searchable chunks, and uses AI to answer your questions while citing the exact source of information.
@@ -85,7 +87,7 @@ pip install -r requirements.txt
 # Create free API key (no credit card needed!)
 ```
 
-### Step 3: Create .env File
+### Step 3: Add Your API Key
 ```bash
 cp .env.example .env
 ```
@@ -95,15 +97,42 @@ Edit `.env` and add:
 GROQ_API_KEY=your-free-key-here
 ```
 
+> 🔐 **Never hardcode API keys in source code.** Locally they live in `.env` (gitignored); on Streamlit Cloud they live in the app's secret store (see [Deployment](#️-deployment-streamlit-community-cloud)).
+
 ### Step 4: Run the App
 ```bash
 streamlit run app.py
 ```
 
 ### Step 5: Use It!
-1. Enter API key in sidebar (or use .env)
-2. Click "Ingest Documents"
-3. Ask questions!
+1. Click "Ingest Documents"
+2. Ask questions!
+
+## ☁️ Deployment (Streamlit Community Cloud)
+
+The app runs for free on [Streamlit Community Cloud](https://share.streamlit.io), connected to this GitHub repo — every push to `main` auto-redeploys it.
+
+**One-time setup:**
+
+1. Go to [share.streamlit.io](https://share.streamlit.io) → **Create app** → select this repo, branch `main`, main file `app.py`
+2. Add the API key: **⚙️ Settings → Secrets** and paste:
+   ```toml
+   GROQ_API_KEY = "gsk_your_key_here"
+   ```
+3. Deploy (first build ≈ 5–10 min, CPU-only PyTorch download)
+
+**Read-only filesystem handling (`storage.py`):**
+
+Streamlit Cloud's app directory is read-only (only `/tmp` is writable). `storage.py` detects this at startup and redirects all writes:
+
+| Host | Base dir | Vector store | Uploads |
+|------|----------|--------------|---------|
+| Local | project dir | `./vector_store/` | `./data/` |
+| Streamlit Cloud | `/tmp` | `/tmp/vector_store/` | `/tmp/data/` |
+
+This prevents the SQLite `attempt to write a readonly database` error.
+
+**⚠️ Ephemeral storage:** `/tmp` is wiped on every restart, redeploy, or sleep. After any restart, click **"Ingest Documents"** again — it takes just a few seconds since the sample documents ship with the repo.
 
 ## 🧩 Chunking Strategy
 
@@ -128,7 +157,7 @@ RecursiveCharacterTextSplitter is the most widely recommended strategy for RAG p
 
 ### Vector Database: ChromaDB
 
-- **Persistence**: Stored on disk at `./vector_store/`
+- **Persistence**: Stored at `storage.VECTOR_STORE_PATH` — `./vector_store/` locally, `/tmp/vector_store/` on Streamlit Cloud
 - **Why?** ChromaDB is lightweight, easy to set up, and integrates natively with LangChain. It persists embeddings to disk so the vector store survives restarts without re-indexing. Unlike FAISS, it provides a simpler API for metadata filtering. Unlike Qdrant/Weaviate, it requires no separate server — it runs in-process.
 
 ## 💡 Example Queries
@@ -163,6 +192,7 @@ rag-document-qa/
 ├── app.py                   # Streamlit UI
 ├── cli.py                   # CLI interface
 ├── rag_engine.py            # Core RAG pipeline
+├── storage.py               # Writable-path resolution (local vs /tmp on cloud)
 ├── requirements.txt         # Dependencies
 ├── .env.example             # API key template
 └── README.md                # This file
@@ -179,7 +209,7 @@ cp .env.example .env
 |----------|----------|-------------|
 | `GROQ_API_KEY` | ✅ Yes | Your Groq API key from [console.groq.com/keys](https://console.groq.com/keys) |
 
-> ⚠️ **Never commit your `.env` file.** It is already included in `.gitignore`.
+> ⚠️ **Never commit your `.env` file.** It is already included in `.gitignore`. On Streamlit Cloud, set the same variable under **⚙️ Settings → Secrets** instead of a `.env` file — never hardcode keys in source (GitHub push protection and GitGuardian will block/alert on committed secrets).
 
 ## ⚠️ Known Limitations
 
@@ -200,6 +230,8 @@ cp .env.example .env
 | "Rate limit exceeded" | Wait 1 minute, then retry |
 | "Module not found" | Run `pip install -r requirements.txt` |
 | "Vector store not found" | Click "Ingest Documents" first |
+| "attempt to write a readonly database" | Fixed automatically by `storage.py` (`/tmp` on Streamlit Cloud) — make sure the latest code is deployed |
+| Worked, then broke after a while | Streamlit Cloud wiped `/tmp` after a sleep/restart — click "Ingest Documents" again |
 
 ## 📝 License
 

@@ -25,6 +25,8 @@ from langchain_core.prompts import PromptTemplate
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
 from dotenv import load_dotenv
 
+from storage import DATA_DIR, VECTOR_STORE_PATH
+
 # Suppress warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
@@ -36,7 +38,6 @@ load_dotenv()
 # Constants
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
-VECTOR_STORE_PATH = "./vector_store"
 COLLECTION_NAME = "document_qa"
 
 
@@ -69,30 +70,46 @@ class RAGEngine:
         self.llm = get_llm()
         self.vector_store = None
 
-    def load_documents(self, data_path: str = "./data") -> List:
-        """Load documents from the data directory."""
+    def load_documents(self, data_paths: List[str] = None) -> List:
+        """Load documents from the data directories (uploads first, then bundled samples)."""
+        if data_paths is None:
+            data_paths = [DATA_DIR]
+            if os.path.abspath(DATA_DIR) != os.path.abspath("./data"):
+                data_paths.append("./data")
+
         documents = []
-        data_dir = Path(data_path)
+        seen = set()
 
-        if not data_dir.exists():
-            raise FileNotFoundError(f"Data directory not found: {data_path}")
+        for data_path in data_paths:
+            data_dir = Path(data_path)
+            if not data_dir.exists():
+                continue
 
-        for file_path in sorted(data_dir.glob("*")):
-            try:
-                if file_path.suffix.lower() == ".pdf":
-                    loader = PyPDFLoader(str(file_path))
-                    documents.extend(loader.load())
-                    print(f"  ✓ PDF: {file_path.name}")
-                elif file_path.suffix.lower() == ".txt":
-                    loader = TextLoader(str(file_path))
-                    documents.extend(loader.load())
-                    print(f"  ✓ TXT: {file_path.name}")
-                elif file_path.suffix.lower() == ".docx":
-                    loader = Docx2txtLoader(str(file_path))
-                    documents.extend(loader.load())
-                    print(f"  ✓ DOCX: {file_path.name}")
-            except Exception as e:
-                print(f"  ✗ Error loading {file_path.name}: {str(e)}")
+            for file_path in sorted(data_dir.glob("*")):
+                if not file_path.is_file() or file_path.name.startswith("."):
+                    continue
+                if file_path.name in seen:
+                    continue  # Uploaded file takes precedence over the bundled copy
+                seen.add(file_path.name)
+
+                try:
+                    if file_path.suffix.lower() == ".pdf":
+                        loader = PyPDFLoader(str(file_path))
+                        documents.extend(loader.load())
+                        print(f"  ✓ PDF: {file_path.name}")
+                    elif file_path.suffix.lower() == ".txt":
+                        loader = TextLoader(str(file_path))
+                        documents.extend(loader.load())
+                        print(f"  ✓ TXT: {file_path.name}")
+                    elif file_path.suffix.lower() == ".docx":
+                        loader = Docx2txtLoader(str(file_path))
+                        documents.extend(loader.load())
+                        print(f"  ✓ DOCX: {file_path.name}")
+                except Exception as e:
+                    print(f"  ✗ Error loading {file_path.name}: {str(e)}")
+
+        if not documents:
+            raise FileNotFoundError("No documents found in the data directories")
 
         print(f"\n  Total: {len(documents)} documents loaded")
         return documents
@@ -153,14 +170,14 @@ class RAGEngine:
 
         return self.vector_store
 
-    def ingest(self, data_path: str = "./data") -> None:
+    def ingest(self, data_paths: List[str] = None) -> None:
         """Full ingestion pipeline: load → chunk → embed → store."""
         print("\n" + "=" * 50)
         print("📥 Document Ingestion")
         print("=" * 50)
 
         print("\n📄 Loading documents...")
-        documents = self.load_documents(data_path)
+        documents = self.load_documents(data_paths)
 
         if not documents:
             raise ValueError("No documents found in the data directory")

@@ -25,6 +25,8 @@ os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
 import streamlit as st
 from dotenv import load_dotenv
 
+from storage import DATA_DIR
+
 load_dotenv()
 
 # Load Groq API key: .env (local dev) -> st.secrets (Streamlit Cloud). Never hardcode keys!
@@ -68,9 +70,9 @@ def main():
         )
 
         if uploaded_files:
-            os.makedirs("data", exist_ok=True)
+            os.makedirs(DATA_DIR, exist_ok=True)
             for file in uploaded_files:
-                file_path = os.path.join("data", file.name)
+                file_path = os.path.join(DATA_DIR, file.name)
                 existing = b""
                 if os.path.exists(file_path):
                     with open(file_path, "rb") as f:
