@@ -34,7 +34,7 @@ def get_embeddings():
     return HuggingFaceEmbeddings(
         model_name="all-MiniLM-L6-v2",
         model_kwargs={"device": "cpu"},
-        encode_kwargs={"normalize_embeddings": False}
+        encode_kwargs={"normalize_embeddings": True}
     )
 
 
@@ -52,6 +52,8 @@ def get_llm():
 
 class RAGEngine:
     """Main RAG pipeline engine."""
+
+    retrieval_version = 2
 
     def __init__(self, persist_directory=None, embeddings=None, llm=None):
         """Initialize the RAG engine with Groq + HuggingFace."""
@@ -135,6 +137,7 @@ class RAGEngine:
         name = f"{COLLECTION_NAME}_{uuid4().hex}"
         store = Chroma(
             collection_name=name,
+            collection_metadata={"hnsw:space": "cosine"},
             embedding_function=self._embeddings(),
             persist_directory=self.persist_directory,
         )
@@ -171,11 +174,13 @@ class RAGEngine:
         count = store._collection.count()
         if not count:
             raise FileNotFoundError("The index is empty. Process documents first.")
+        if (store._collection.metadata or {}).get('hnsw:space') != 'cosine':
+            raise ValueError("The search index needs updating. Process documents again.")
         self.vector_store = store
         self.chunk_count = count
         return store
 
-    def retrieve(self, query: str, k: int = 3):
+    def retrieve(self, query: str, k: int = 3, source: str = None):
         if not isinstance(query, str) or not query.strip():
             raise ValueError("Enter a question first.")
         if len(query) > 4000:
@@ -184,7 +189,27 @@ class RAGEngine:
             raise ValueError("Choose between 1 and 10 source passages.")
         if self.vector_store is None:
             self.load_vector_store()
-        return self.vector_store.similarity_search(query.strip(), k=k)
+        options = {"filter": {"source": source}} if source else {}
+        candidate_count = min(max(12, k * 3), self.chunk_count) if self.chunk_count else max(12, k * 3)
+        matches = self.vector_store.similarity_search_with_score(query.strip(), k=candidate_count, **options)
+        if not matches:
+            return []
+        # Cosine distance is lower for better matches. Avoid presenting unrelated
+        # nearest neighbours as evidence when the library does not cover a query.
+        best_similarity = max(1.0 - float(distance) for _, distance in matches)
+        threshold = max(0.32, best_similarity - 0.12)
+        results, seen = [], set()
+        for document, distance in sorted(matches, key=lambda pair: pair[1]):
+            if 1.0 - float(distance) < threshold:
+                continue
+            fingerprint = ' '.join(document.page_content.split())
+            if fingerprint in seen:
+                continue
+            seen.add(fingerprint)
+            results.append(document)
+            if len(results) == k:
+                break
+        return results
 
     def browse(self, source: str, limit: int = 3):
         """Preview the first indexed passages in a document without a query or LLM."""
@@ -221,9 +246,9 @@ class RAGEngine:
         print("✅ Ingestion complete!")
         print("=" * 50)
 
-    def generate_answer(self, query: str, k: int = 3) -> dict:
+    def generate_answer(self, query: str, k: int = 3, source: str = None) -> dict:
         """Generate an answer using RAG pipeline."""
-        documents = self.retrieve(query, k)
+        documents = self.retrieve(query, k, source=source)
         if not documents:
             return {"answer": "I don't have enough information to answer this question.", "sources": []}
         if self.llm is None:

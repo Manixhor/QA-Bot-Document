@@ -10,10 +10,12 @@ APP = str(Path(__file__).resolve().parents[1] / 'app.py')
 
 
 class FakeEngine:
+    retrieval_version = 2
     def __init__(self, **kwargs):
         self.chunk_count = 0
         self.load_errors = []
         self.questions = []
+        self.scopes = []
 
     def ingest(self, paths):
         self.chunk_count = 12
@@ -21,11 +23,12 @@ class FakeEngine:
     def browse(self, source, limit=3):
         return [{"content": "A preview without a question.", "metadata": {"source": source}}]
 
-    def retrieve(self, question, k=3):
+    def retrieve(self, question, k=3, source=None):
+        self.scopes.append(source)
         self.questions.append((question, k))
         return [Document(page_content="Python is a programming language.", metadata={"source": "python.txt", "page": 0})]
 
-    def generate_answer(self, question, k=3):
+    def generate_answer(self, question, k=3, source=None):
         self.questions.append((question, k))
         return {'answer': 'Python is a language [1].', 'sources': [
             {'content': 'Python is a programming language.', 'metadata': {'source': 'python.txt', 'page': 0}}]}
@@ -128,3 +131,26 @@ class UITests(unittest.TestCase):
             app.radio[0].set_value('Source search').run()
             self.assertEqual(app.text_area[0].value, 'What are the applications of machine learning?')
             self.assertFalse(app.exception)
+
+    def test_source_search_can_target_one_file(self):
+        from storage import SAMPLE_DIR
+        with patch.dict(os.environ, {'GROQ_API_KEY': ''}), patch('rag_engine.RAGEngine', FakeEngine):
+            app = AppTest.from_file(APP).run()
+            button(app, 'Process documents').click().run()
+            app.selectbox[0].set_value('python_programming.txt').run()
+            app.text_area[0].input('Who created Python?').run()
+            button(app, 'Search documents ↗').click().run()
+            self.assertFalse(app.exception)
+            self.assertEqual(app.session_state['rag_engine'].scopes[-1], str(SAMPLE_DIR / 'python_programming.txt'))
+            self.assertEqual(app.session_state['history'][-1]['scope'], 'python_programming.txt')
+
+    def test_source_search_has_honest_no_match_state(self):
+        with patch.dict(os.environ, {'GROQ_API_KEY': ''}), patch('rag_engine.RAGEngine', FakeEngine), patch.object(FakeEngine, 'retrieve', return_value=[]):
+            app = AppTest.from_file(APP).run()
+            button(app, 'Process documents').click().run()
+            app.text_area[0].input('What is the refrigerator refund policy?').run()
+            button(app, 'Search documents ↗').click().run()
+            self.assertFalse(app.exception)
+            result = app.session_state['history'][-1]
+            self.assertEqual(result['sources'], [])
+            self.assertIn('No sufficiently relevant passage', result['answer'])

@@ -20,6 +20,7 @@ const assert = require('node:assert/strict');
     await page.getByText('Document library · 1 file', { exact: true }).waitFor();
     console.log('Upload selected');
     await page.getByRole('button', { name: 'Process documents', exact: true }).click();
+    await page.getByText('Source search', { exact: true }).click();
     const search = page.getByRole('button', { name: 'Search documents ↗', exact: true });
     await search.waitFor();
     await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => button.textContent.includes('Search documents') && !button.disabled), null, { timeout: 120000 });

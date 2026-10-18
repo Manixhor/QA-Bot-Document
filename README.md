@@ -268,3 +268,10 @@ Source files are polled for changes so Streamlit Cloud can apply GitHub updates.
 ### Explore without a prepared question
 
 You can type any question about your documents; the example buttons are optional. **Source search** finds matching original passages for a question or keywords without writing an AI answer. **Browse documents** previews the first indexed passages in a selected file without a question or API key. Process documents first, then choose the file and select **Preview document**. The passage slider controls the preview length (up to ten passages). Your draft question is preserved when switching modes.
+
+
+### Search quality and scope
+
+New indexes use normalized embeddings with cosine distance. Search filters weak matches, excludes exact duplicate passages and keeps results close to the strongest match; it can return fewer than the selected maximum or no results. These checks reduce unrelated results but are not a guarantee that every retained passage answers the question. Use **Search within** to restrict search and AI answers to one processed file. The best Source search excerpt opens automatically and shows original text without Markdown heading formatting. After this update, process documents again to build the new index.
+
+Local quality checks on the bundled library covered the Python creator/release year, machine-learning types, the RAG acronym and frontend development; each retrieved its expected document. An unrelated refrigerator-refund question produced no result. API-provider answers are a separate verification step.

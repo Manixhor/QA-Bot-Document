@@ -60,8 +60,9 @@ class EngineTests(unittest.TestCase):
         for k in (0, 11, True, 1.5):
             with self.assertRaises(ValueError):
                 engine.retrieve('question', k)
+        engine.vector_store.similarity_search_with_score.return_value = []
         engine.retrieve(' question ', 4)
-        engine.vector_store.similarity_search.assert_called_once_with('question', k=4)
+        engine.vector_store.similarity_search_with_score.assert_called_once_with('question', k=12)
 
     def test_answer_preserves_sources_and_includes_citations_in_context(self):
         llm = Mock()
@@ -69,7 +70,7 @@ class EngineTests(unittest.TestCase):
         engine = RAGEngine(llm=llm)
         engine.vector_store = Mock()
         document = Document(page_content='Python is a programming language.', metadata={'source': '/tmp/python.txt', 'page': 0})
-        engine.vector_store.similarity_search.return_value = [document]
+        engine.vector_store.similarity_search_with_score.return_value = [(document, 0.1)]
         result = engine.generate_answer('What is Python?')
         self.assertEqual(result['sources'][0]['content'], document.page_content)
         self.assertIn('[1] python.txt', llm.invoke.call_args.args[0][1][1])
@@ -78,7 +79,7 @@ class EngineTests(unittest.TestCase):
     def test_no_key_has_actionable_error(self):
         engine = RAGEngine()
         engine.vector_store = Mock()
-        engine.vector_store.similarity_search.return_value = [Document(page_content='hello')]
+        engine.vector_store.similarity_search_with_score.return_value = [(Document(page_content='hello'), 0.1)]
         with patch.dict(os.environ, {'GROQ_API_KEY': ''}):
             with self.assertRaisesRegex(ValueError, 'GROQ_API_KEY'):
                 engine.generate_answer('hello')
@@ -86,6 +87,17 @@ class EngineTests(unittest.TestCase):
     def test_no_results_does_not_call_provider(self):
         engine = RAGEngine(llm=Mock())
         engine.vector_store = Mock()
-        engine.vector_store.similarity_search.return_value = []
+        engine.vector_store.similarity_search_with_score.return_value = []
         self.assertEqual(engine.generate_answer('unknown')['sources'], [])
         engine.llm.invoke.assert_not_called()
+
+    def test_search_rejects_weak_results_and_duplicates(self):
+        engine = RAGEngine()
+        engine.vector_store = Mock()
+        strong = Document(page_content='Python was created by Guido van Rossum.')
+        weak = Document(page_content='Refrigerators have compressors.')
+        engine.vector_store.similarity_search_with_score.return_value = [(strong, .2), (strong, .21), (weak, .9)]
+        self.assertEqual(engine.retrieve('Who created Python?', source='python.txt'), [strong])
+        self.assertEqual(engine.vector_store.similarity_search_with_score.call_args.kwargs['filter'], {'source': 'python.txt'})
+        engine.vector_store.similarity_search_with_score.return_value = [(weak, .9)]
+        self.assertEqual(engine.retrieve('Who created Python?'), [])

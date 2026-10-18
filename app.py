@@ -49,6 +49,8 @@ def invalidate_index():
 def show_answer(entry):
     st.markdown("#### Document preview" if entry.get("mode") == "Browse documents" else "#### Your question")
     st.write(entry["question"])
+    if entry.get("scope"):
+        st.caption(f"Searched in: {entry['scope']}")
     st.markdown("#### Matching passages" if entry.get("mode") in ("Source search", "Browse documents") else "#### Answer")
     st.write(entry["answer"])
     if entry.get("sources"):
@@ -58,14 +60,19 @@ def show_answer(entry):
         filename = Path(metadata.get("source", "Unknown")).name
         page = metadata.get("page")
         label = f"[{i}] {filename}" + (f" · Page {page + 1}" if isinstance(page, int) else "")
-        with st.expander(label):
-            st.write(source["content"])
+        with st.expander(label, expanded=(entry.get("mode") == "Source search" and i == 1)):
+            st.text(source["content"])
 
 
 def main():
     initialize_session_state()
     css = Path(__file__).with_name('static').joinpath('style.css').read_text()
     st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+    existing_engine = st.session_state.rag_engine
+    if existing_engine is not None and getattr(existing_engine, 'retrieval_version', 0) != 2:
+        st.session_state.rag_engine = None
+        st.session_state.ingested = False
+        st.session_state.needs_index = True
     workspace = Path(st.session_state.workspace.name)
     upload_dir = workspace / 'uploads'
     with st.sidebar:
@@ -119,7 +126,7 @@ def main():
                     st.warning(warning)
         st.divider()
         st.subheader("Search settings")
-        k = st.slider("Source passages per answer", 1, 10, 3)
+        k = st.slider("Maximum passages per result", 1, 10, 3)
         st.caption("More passages add context but may take longer.")
         st.caption("Uploads and search indexes are isolated to this browser session. Relevant passages are sent to Groq when you ask a question.")
 
@@ -149,10 +156,14 @@ def main():
     }
     st.caption(descriptions[mode])
     selected_source = None
+    search_source = None
     if mode == "Browse documents":
         selected_source = st.selectbox("Document to preview", sorted(files), index=0 if files else None,
                                        placeholder="Add a document first", disabled=not ready)
     else:
+        search_scope = st.selectbox("Search within", ["All processed documents", *sorted(files)], disabled=not ready)
+        if search_scope != "All processed documents":
+            search_source = str(files[search_scope])
         st.text_area("Your question", key="question", height=110, max_chars=4000, on_change=remember_question,
                      placeholder="Type your own question or keywords here. Examples below are optional.")
     action = {"AI answer": "Find my answer ↗", "Source search": "Search documents ↗",
@@ -174,14 +185,14 @@ def main():
                             "sources": sources,
                         }
                     elif mode == "Source search":
-                        documents = engine.retrieve(question, k=k)
+                        documents = engine.retrieve(question, k=k, source=search_source)
                         result = {
-                            "answer": f"Found {len(documents)} matching passages. Expand the sources below to read them. These are search results, not an AI-generated answer." if documents else "No passages found. Try another question or process your documents again.",
+                            "answer": f"Found {len(documents)} matching passages. The best match is open below. These are original excerpts, not an AI-generated answer." if documents else "No sufficiently relevant passage was found in the selected documents. Try different keywords, choose another file, or upload a document that covers this topic.",
                             "sources": [{"content": doc.page_content, "metadata": doc.metadata} for doc in documents],
                         }
                     else:
-                        result = engine.generate_answer(question, k=k)
-                    st.session_state.history.append({"question": question, "mode": mode, **result})
+                        result = engine.generate_answer(question, k=k, source=search_source)
+                    st.session_state.history.append({"question": question, "mode": mode, "scope": selected_source if mode == "Browse documents" else search_scope, **result})
                     st.session_state.history = st.session_state.history[-20:]
                 except Exception as error:
                     logging.exception("Answer generation failed")
