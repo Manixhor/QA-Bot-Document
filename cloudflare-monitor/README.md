@@ -18,4 +18,8 @@ npx cf deploy --secrets-file /path/to/private-secrets.json
 
 The private JSON must contain CHECK_TOKEN with a randomly generated secret. Never commit it. POST /check requires Authorization: Bearer <CHECK_TOKEN>; no public endpoint launches a browser. Scheduled checks do not need this token. The token is only for an owner-triggered verification.
 
-Keep the existing GitHub schedule until the deployed Cloudflare check passes. Once verified, remove schedule from .github/workflows/qa-bot-availability.yml, leaving manual checks available.
+Cloudflare is deployed in the manigururam08 account. A live check passed on 22 October 2026. The GitHub schedule has been removed; Actions remains available for manual checks.
+
+Dashboard: https://dash.cloudflare.com/e9e084124b4e423e6d1c7000631e8d5b/workers/services/view/qa-bot-availability/production
+
+The QA Bot keeps its existing Streamlit URL. The Worker URL is only an authenticated maintenance endpoint, not a replacement app.

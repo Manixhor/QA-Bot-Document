@@ -1,6 +1,6 @@
 # QA Bot availability check
 
-GitHub Actions opens the public QA Bot every four hours at minute 17 (UTC), and on manual dispatch. If the Streamlit sleep button appears, the browser clicks it and waits up to five minutes for the Process documents control. It never uploads documents, processes the library, or calls Groq, and needs no API secrets.
+Cloudflare now handles the automatic schedule (see ../cloudflare-monitor/README.md). GitHub Actions remains available on manual dispatch and checker-code changes. If the Streamlit sleep button appears, the browser clicks it and waits up to five minutes for the Process documents control. It never uploads documents, processes the library, or calls Groq, and needs no API secrets.
 
 See Actions → QA Bot availability for run status and the seven-day screenshot artifact. GitHub's normal workflow failure notifications apply according to your account notification preferences. A screenshot is also attempted when checking fails.
 

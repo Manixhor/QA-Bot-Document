@@ -1,6 +1,6 @@
 import { defineConfig, bindings, triggers } from 'cf/config';
 export default defineConfig({
-  accountId: '1e5a5507aa6b66ae97f1f85ee3e71c98',
+  accountId: 'e9e084124b4e423e6d1c7000631e8d5b',
   worker: {
     name: 'qa-bot-availability',
     entrypoint: './index.js',
